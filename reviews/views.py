@@ -4,14 +4,19 @@ from django.shortcuts import redirect, render
 from .forms import StoreForm, CommentForm
 from .models import Store, Review, Comment
 from django.contrib import messages
+from django.core.paginator import Paginator
 
 from django.db.models import Avg
 
 # Create your views here.
 def index(request):
     stores = Store.objects.all()
+    paginator = Paginator(stores, 1)  # Show 25 contacts per page.
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
     context = {
         "stores": stores,
+        "page_obj": page_obj,
     }
     return render(request, "reviews/index.html", context)
 
@@ -37,18 +42,18 @@ def store_detail(request, store_pk):
     store = Store.objects.get(pk=store_pk)
     reviews = store.review_set.all()
 
-    if request.POST.get('grade-5'):
-      reviews = Review.objects.filter(grade=5)
-    elif request.POST.get('grade-4'):
-      reviews = Review.objects.filter(grade=4)
-    elif request.POST.get('grade-3'):
-      reviews = Review.objects.filter(grade=3)
-    elif request.POST.get('grade-2'):
-      reviews = Review.objects.filter(grade=2)
-    elif request.POST.get('grade-1'):
-      reviews = Review.objects.filter(grade=1)
-    elif request.POST.get('reset'):
-      reviews = Review.objects.order_by("-pk")
+    if request.POST.get("grade-5"):
+        reviews = Review.objects.filter(grade=5)
+    elif request.POST.get("grade-4"):
+        reviews = Review.objects.filter(grade=4)
+    elif request.POST.get("grade-3"):
+        reviews = Review.objects.filter(grade=3)
+    elif request.POST.get("grade-2"):
+        reviews = Review.objects.filter(grade=2)
+    elif request.POST.get("grade-1"):
+        reviews = Review.objects.filter(grade=1)
+    elif request.POST.get("reset"):
+        reviews = Review.objects.order_by("-pk")
 
     review_5 = Review.objects.filter(grade=5).count()
     review_4 = Review.objects.filter(grade=4).count()
@@ -59,13 +64,13 @@ def store_detail(request, store_pk):
     review_ave = 0
 
     if review_ave == 0:
-      review_ave = "평가 없음"
-    
-    if reviews == True:
-      ave = Review.objects.aggregate(Avg('grade'))
+        review_ave = "평가 없음"
 
-      # round(값, 표시하고 싶은 자리수)
-      review_ave = round(ave['grade__avg'], 2)
+    if reviews == True:
+        ave = Review.objects.aggregate(Avg("grade"))
+
+        # round(값, 표시하고 싶은 자리수)
+        review_ave = round(ave["grade__avg"], 2)
 
     context = {
         "store": store,
@@ -139,14 +144,16 @@ def review_update(request, store_pk, review_pk):
         messages.warning(request, "작성자만 수정할 수 있습니다.")
         return redirect("articles:detail", review.pk)
 
+
 def search(request):
-    search= Store.objects.all().order_by('-pk')
-    q = request.POST.get('q',"")
+    search = Store.objects.all().order_by("-pk")
+    q = request.POST.get("q", "")
     if q:
         search = search.filter(store_name__icontains=q)
-        return render(request, 'reviews/search.html',{'search':search, 'q':q})
+        return render(request, "reviews/search.html", {"search": search, "q": q})
     else:
-        return render(request, 'reviews/search.html')
+        return render(request, "reviews/search.html")
+
 
 def comment_create(request, store_pk, review_pk):
     review = Review.objects.get(pk=review_pk)
@@ -168,4 +175,3 @@ def comment_delete(request, store_pk, review_pk, comment_pk):
             comment.delete()
             return redirect("reviews:review_detail", store_pk, review_pk)
     return redirect("reviews:review_detail", store_pk, review_pk)
-
